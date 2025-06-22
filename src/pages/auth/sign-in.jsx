@@ -45,14 +45,12 @@ export function SignIn() {
       {/* Right Side - Login Form */}
       <div className="flex-1 bg-gray-50 flex items-center justify-center p-8">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+          {/* Logo + Judul */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-green-500 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-              <div className="w-10 h-10 border-3 border-white rounded-lg flex items-center justify-center">
-                <div className="w-2 h-6 bg-white rounded-full"></div>
-                <div className="w-6 h-2 bg-white rounded-full ml-1"></div>
-              </div>
+            <div className="w-16 h-16 mx-auto mb-4">
+              <img src="/img/logors.png" alt="Logo Si-Apotik" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Si-Apotek</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Si-Apotik</h2>
           </div>
 
           {/* Login Form */}

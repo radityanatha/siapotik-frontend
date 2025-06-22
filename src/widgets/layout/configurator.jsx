@@ -10,7 +10,6 @@ import {
   useMaterialTailwindController,
   setOpenConfigurator,
   setSidenavColor,
-  setSidenavType,
   setFixedNavbar,
 } from "@/context";
 
