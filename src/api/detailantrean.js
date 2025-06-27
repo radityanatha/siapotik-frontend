@@ -1,7 +1,5 @@
-// src/api/antrean.js
 import axios from "axios";
 
-// Mengambil semua antrean
 export const getAntrean = async () => {
   try {
     const token = localStorage.getItem("token");
