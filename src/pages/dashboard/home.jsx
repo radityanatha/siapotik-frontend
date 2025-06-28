@@ -1,80 +1,133 @@
 import React, { useEffect, useState } from "react";
-import {
-  Typography,
-  Card,
-  CardHeader,
-  CardBody,
-  IconButton,
-  Menu,
-  MenuHandler,
-  MenuList,
-  MenuItem,
-} from "@material-tailwind/react";
-import {
-  EllipsisVerticalIcon,
-  ArrowUpIcon,
-} from "@heroicons/react/24/outline";
-import { CheckCircleIcon, ClockIcon } from "@heroicons/react/24/solid";
+import { Pill } from "lucide-react";
+import { Typography } from "@material-tailwind/react";
+import { ClockIcon, UserIcon, UsersIcon } from "@heroicons/react/24/solid";
 
 import { StatisticsCard } from "@/widgets/cards";
 import { StatisticsChart } from "@/widgets/charts";
-import { statisticsChartsData, ordersOverviewData } from "@/data";
-
-import { BanknotesIcon, UserPlusIcon, UsersIcon, ChartBarIcon } from "@heroicons/react/24/solid";
-
+import { statisticsChartsData } from "@/data";
 import { useSearch } from "@/context/SearchContext";
-import { fetchObatTransaksi } from "@/api/obatTransaksi";
-import { fetchTransaksi } from "@/api/transaksi";
+
+import {
+  getTotalRegistrasi,
+  getStokObat,
+  getStatusSummary,
+} from "@/api/cardInfo";
 
 export function Home() {
   const { searchKeyword } = useSearch();
 
-  const [moneyValue, setMoneyValue] = useState("Loading...");
-  const [transaksiList, setTransaksiList] = useState([]);
+  const [jumlahStokObat, setJumlahStokObat] = useState(0);
+  const [presentaseStokObatLayak, setPresentaseStokObatLayak] = useState(0);
+  const [kategoriStokLabel, setKategoriStokLabel] = useState("");
+  const [totalRegistrasi, setTotalRegistrasi] = useState(0);
+
+  const [jumlahSelesai, setJumlahSelesai] = useState(0);
+  const [jumlahSelesaiPembayaran, setJumlahSelesaiPembayaran] = useState(0);
+
+  useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      console.log("✅ Token ditemukan:", token);
+
+      const stokObatData = await getStokObat();
+      console.log("📦 Data Stok Obat:", stokObatData);
+
+      setJumlahStokObat(stokObatData.length);
+
+      let stokCukup = 0, stokStabil = 0, stokGawat = 0;
+      stokObatData.forEach(item => {
+        const stok = item.stok;
+        if (stok <= 100) stokGawat++;
+        else if (stok <= 300) stokStabil++;
+        else if (stok <= 700) stokCukup++;
+      });
+
+      const totalStokObat = stokObatData.length;
+      const layak = stokCukup + stokStabil;
+      const presentase = totalStokObat > 0 ? Math.round((layak / totalStokObat) * 100) : 0;
+      setPresentaseStokObatLayak(presentase);
+
+      let kategoriLabel = "Tidak diketahui";
+      if (stokCukup >= stokStabil && stokCukup >= stokGawat) kategoriLabel = "Kategori Cukup";
+      else if (stokStabil >= stokGawat) kategoriLabel = "Kategori Stabil";
+      else kategoriLabel = "Kategori Gawat";
+      setKategoriStokLabel(kategoriLabel);
+
+      const totalReg = await getTotalRegistrasi();
+      console.log("📋 Total Registrasi:", totalReg);
+      setTotalRegistrasi(totalReg);
+
+      const { selesai, selesaiPembayaran } = await getStatusSummary();
+      console.log("📊 Status Summary:", { selesai, selesaiPembayaran });
+      setJumlahSelesai(selesai);
+      setJumlahSelesaiPembayaran(selesaiPembayaran);
+
+    } catch (error) {
+      console.error("❌ Gagal mengambil data:", error);
+    }
+  };
+
+  fetchData();
+}, []);
 
   const statisticsCardsData = [
     {
       color: "blue",
-      icon: BanknotesIcon,
-      title: "Penghasilan Hari Ini",
-      value: moneyValue,
-      footer: {
-        color: "text-blue-900",
-        value: "+10%",
-        label: "dari minggu lalu",
-      },
-    },
-    {
-      color: "blue",
       icon: UsersIcon,
-      title: "Today's Users",
-      value: "2,300",
+      title: "Total Registrasi",
+      value: totalRegistrasi.toString(),
       footer: {
-        color: "text-blue-900",
-        value: "+3%",
-        label: "than last month",
+        color: "text-blue-500",
+        value: "",
+        label: "",
+        barColor: "bg-blue-500",
+        barWidth: "0%",
       },
     },
     {
-      color: "blue",
-      icon: UserPlusIcon,
-      title: "New Clients",
-      value: "3,462",
-      footer: {
-        color: "text-red-500",
-        value: "-2%",
-        label: "than yesterday",
-      },
-    },
-    {
-      color: "blue",
-      icon: ChartBarIcon,
-      title: "Sales",
-      value: "$103,430",
+      color: "green",
+      icon: UserIcon,
+      title: "Status Selesai",
+      value: jumlahSelesai.toString(),
       footer: {
         color: "text-green-500",
-        value: "+5%",
-        label: "than yesterday",
+        value: `${jumlahSelesai}`,
+        label: "pasien telah selesai",
+        barColor: "bg-green-400",
+        barWidth: "100%",
+      },
+    },
+    {
+      color: "pink",
+      icon: UserIcon,
+      title: "Selesai Pembayaran",
+      value: jumlahSelesaiPembayaran.toString(),
+      footer: {
+        color: "text-pink-500",
+        value: `${jumlahSelesaiPembayaran}`,
+        label: "pasien telah bayar",
+        barColor: "bg-pink-400",
+        barWidth: "100%",
+      },
+    },
+    {
+      color: "blue",
+      icon: Pill,
+      title: "Stok Obat",
+      value: jumlahStokObat.toString(),
+      footer: {
+        color:
+          presentaseStokObatLayak >= 70
+            ? "text-green-500"
+            : presentaseStokObatLayak >= 40
+            ? "text-yellow-500"
+            : "text-red-500",
+        value: `${presentaseStokObatLayak}%`,
+        label: kategoriStokLabel,
+        barColor: "bg-green-400",
+        barWidth: `${presentaseStokObatLayak}%`,
       },
     },
   ];
@@ -86,26 +139,6 @@ export function Home() {
   const filteredCharts = statisticsChartsData.filter(({ title }) =>
     title.toLowerCase().includes(searchKeyword.toLowerCase())
   );
-
-  useEffect(() => {
-  const getMoney = async () => {
-    const total = await fetchObatTransaksi();
-    const formatted = total.toLocaleString("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    });
-    setMoneyValue(formatted);
-  };
-
-  const getTransaksi = async () => {
-    const data = await fetchTransaksi();
-    setTransaksiList(data);
-  };
-
-  getMoney();
-  getTransaksi();
-}, []);
-
 
   return (
     <div className="mt-12">
@@ -119,136 +152,37 @@ export function Home() {
               className: "w-6 h-6 text-white",
             })}
             footer={
-              <Typography className="font-normal text-blue-gray-600">
-                <strong className={footer.color}>{footer.value}</strong>
-                &nbsp;{footer.label}
-              </Typography>
+              <div>
+                <Typography className="font-normal text-blue-gray-600">
+                  <strong className={footer.color}>{footer.value}</strong>&nbsp;{footer.label}
+                </Typography>
+                {footer.barWidth && (
+                  <div className="w-full h-1.5 bg-blue-gray-100 rounded-full mt-2">
+                    <div
+                      className={`h-full rounded-full ${footer.barColor}`}
+                      style={{ width: footer.barWidth }}
+                    />
+                  </div>
+                )}
+              </div>
             }
           />
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-y-12 gap-x-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-12 grid grid-cols-1 gap-y-12 gap-x-6 md:grid-cols-2 xl:grid-cols-3">
         {filteredCharts.map((props) => (
           <StatisticsChart
             key={props.title}
             {...props}
             footer={
-              <Typography
-                variant="small"
-                className="flex items-center font-normal text-blue-gray-600"
-              >
+              <Typography variant="small" className="flex items-center font-normal text-blue-gray-600">
                 <ClockIcon strokeWidth={2} className="h-4 w-4 text-blue-gray-400" />
                 &nbsp;{props.footer}
               </Typography>
             }
           />
         ))}
-      </div>
-
-      <div className="mb-4 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <Card className="overflow-hidden xl:col-span-2 border border-blue-gray-100 shadow-sm">
-  <CardHeader
-    floated={false}
-    shadow={false}
-    color="transparent"
-    className="m-0 flex items-center justify-between p-6"
-  >
-    <div>
-      <Typography variant="h6" color="blue-gray" className="mb-1">
-        Pasien Dilayani
-      </Typography>
-      <Typography
-        variant="small"
-        className="flex items-center gap-1 font-normal text-blue-gray-600"
-      >
-        <CheckCircleIcon strokeWidth={3} className="h-4 w-4 text-blue-gray-200" />
-        <strong>{transaksiList.length} transaksi</strong> telah diproses
-      </Typography>
-    </div>
-  </CardHeader>
-  <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
-    <table className="w-full min-w-[640px] table-auto">
-      <thead>
-        <tr>
-          {["No. Registrasi", "Tanggal Bayar", "Status", "Total Tagihan"].map((el) => (
-            <th
-              key={el}
-              className="border-b border-blue-gray-50 py-3 px-6 text-left"
-            >
-              <Typography
-                variant="small"
-                className="text-[11px] font-medium uppercase text-blue-gray-400"
-              >
-                {el}
-              </Typography>
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {transaksiList.map((item, index) => (
-          <tr key={index}>
-            <td className="py-3 px-6">{item.no_registrasi}</td>
-            <td className="py-3 px-6">{item.tanggal_bayar}</td>
-            <td className="py-3 px-6">
-              {item.status === 1 ? (
-                <span className="text-green-600 font-semibold">Lunas</span>
-              ) : (
-                <span className="text-red-600 font-semibold">Belum Lunas</span>
-              )}
-            </td>
-            <td className="py-3 px-6">
-              Rp {parseInt(item.total_tagihan).toLocaleString("id-ID")}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </CardBody>
-</Card>
-
-
-
-        <Card className="border border-blue-gray-100 shadow-sm">
-          <CardHeader floated={false} shadow={false} color="transparent" className="m-0 p-6">
-            <Typography variant="h6" color="blue-gray" className="mb-2">
-              Orders Overview
-            </Typography>
-            <Typography
-              variant="small"
-              className="flex items-center gap-1 font-normal text-blue-gray-600"
-            >
-              <ArrowUpIcon strokeWidth={3} className="h-3.5 w-3.5 text-green-500" />
-              <strong>24%</strong> this month
-            </Typography>
-          </CardHeader>
-          <CardBody className="pt-0">
-            {ordersOverviewData.map(({ icon, color, title, description }, key) => (
-              <div key={title} className="flex items-start gap-4 py-3">
-                <div
-                  className={`relative p-1 after:absolute after:-bottom-6 after:left-2/4 after:w-0.5 after:-translate-x-2/4 after:bg-blue-gray-50 after:content-[''] ${
-                    key === ordersOverviewData.length - 1 ? "after:h-0" : "after:h-4/6"
-                  }`}
-                >
-                  {React.createElement(icon, { className: `!w-5 !h-5 ${color}` })}
-                </div>
-                <div>
-                  <Typography variant="small" color="blue-gray" className="block font-medium">
-                    {title}
-                  </Typography>
-                  <Typography
-                    as="span"
-                    variant="small"
-                    className="text-xs font-medium text-blue-gray-500"
-                  >
-                    {description}
-                  </Typography>
-                </div>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
       </div>
     </div>
   );
